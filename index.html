@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU Scheduling Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 2rem;
+            font-size: 2rem;
+        }
+
+        .input-section {
+            margin-bottom: 2rem;
+        }
+
+        .algorithm-select {
+            margin-bottom: 1.5rem;
+        }
+
+        .algorithm-select label {
+            font-weight: 600;
+            color: #333;
+            margin-right: 1rem;
+        }
+
+        .algorithm-select select {
+            padding: 0.5rem 1rem;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            background: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+
+        td input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        button {
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-add {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-run {
+            background: #667eea;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-reset {
+            background: #f44336;
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .gantt-section {
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .gantt-section.active {
+            display: block;
+        }
+
+        .gantt-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .gantt-container {
+            background: white;
+            border: 2px solid #333;
+            padding: 1rem;
+            border-radius: 8px;
+            position: relative;
+            padding-top: 3rem; 
+        }
+
+        .current-time-pointer {
+            position: absolute;
+            top: -2.75rem; /* SỬA: Đẩy con trỏ lên trên (so với chart) */
+            left: 0; 
+            z-index: 10;
+            transition: left 0.05s linear;
+            transform: translateX(-50%); 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #667eea;
+            font-size: 1.25rem;
+            display: none;
+        }
+
+        #pointerTime {
+            background: #667eea;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 2px;
+            white-space: nowrap;
+        }
+        
+        .gantt-chart {
+            display: flex;
+            min-height: 4rem;
+            margin-bottom: 0.5rem;
+            /* SỬA: Thêm position relative */
+            position: relative; 
+        }
+
+        .process-block {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .process-block .process-name {
+            position: relative;
+            z-index: 2;
+            color: white;
+        }
+
+        .process-block .process-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .timeline {
+            display: flex;
+            position: relative;
+            padding-top: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .time-mark {
+            position: relative;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #333;
+            text-align: right;
+            white-space: nowrap; 
+        }
+
+        .time-mark.start {
+            text-align: left;
+            width: 0;
+        }
+        
+        .results-table {
+            margin-top: 2rem;
+        }
+
+        .results-table table {
+            background: #f9f9f9;
+        }
+
+        .results-table th {
+            background: #764ba2;
+        }
+
+        .summary {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f0f0f0;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .summary-item {
+            text-align: center;
+        }
+
+        .summary-label {
+            font-weight: 600;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-top: 0.5rem;
+        }
+
+        .process-colors {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .color-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .color-box {
+            width: 30px;
+            height: 20px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖥️ CPU Scheduling Simulator</h1>
+
+        <div class="input-section">
+            <div class="algorithm-select">
+                <label for="algorithm">Chọn thuật toán:</label>
+                <select id="algorithm">
+                    <option value="fcfs">FCFS (First Come First Serve)</option>
+                    <option value="sjf">SJF (Shortest Job First)</option>
+                    <option value="rr">Round Robin</option>
+                    <option value="priority">Priority Scheduling</option>
+                </select>
+                <span id="quantumInput" style="margin-left: 1rem; display: none;">
+                    <label>Time Quantum:</label>
+                    <input type="number" id="quantum" value="3" min="1" style="width: 60px; padding: 0.5rem;">
+                </span>
+            </div>
+
+            <table id="processTable">
+                <thead>
+                    <tr>
+                        <th>Process</th>
+                        <th>Arrival Time</th>
+                        <th>Burst Time</th>
+                        <th id="priorityHeader" style="display: none;">Priority</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="processTableBody">
+                    <tr data-process="1">
+                        <td>P1</td>
+                        <td><input type="number" class="arrival" value="0" min="0"></td>
+                        <td><input type="number" class="burst" value="5" min="1"></td>
+                        <td class="priority-cell" style="display: none;"><input type="number" class="priority" value="1" min="1"></td>
+                        <td><button onclick="removeRow(this)" class="btn-reset" style="padding: 0.5rem 1rem;">Xóa</button></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="button-group">
+                <button class="btn-add" onclick="addProcess()">➕ Thêm Process</button>
+                <button class="btn-run" onclick="runScheduling()">▶️ Chạy Simulation</button>
+                <button class="btn-reset" onclick="resetAll()">🔄 Reset</button>
+            </div>
+        </div>
+
+        <div class="gantt-section" id="ganttSection">
+            <h2 class="gantt-title" id="ganttTitle">Biểu đồ Gantt</h2>
+            
+            <div class="gantt-container" id="ganttContainer">
+                
+                <div class="gantt-chart" id="ganttChart">
+                    <div class="current-time-pointer" id="timePointer">
+                        <span id="pointerTime">0.0</span>▼
+                    </div>
+                </div>
+
+                <div class="timeline" id="timeline"></div>
+            </div>
+
+            <div class="process-colors" id="processColors"></div>
+
+            <div class="results-table">
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Process</th>
+                            <th>Arrival Time</th>
+                            <th>Burst Time</th>
+                            <th>Completion Time</th>
+                            <th>Waiting Time</th>
+                            <th>Turnaround Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody"></tbody>
+                </table>
+
+                <div class="summary">
+                    <div class="summary-item">
+                        <div class="summary-label">Average Waiting Time</div>
+                        <div class="summary-value" id="avgWaiting">0</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Average Turnaround Time</div>
+                        <div class="summary-value" id="avgTurnaround">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const colors = ['#FBC02D', '#1976D2', '#E64A19', '#388E3C', '#5E35B1', '#D32F2F', '#00796B', '#F57C00'];
+        let processCount = 1;
+
+        document.getElementById('algorithm').addEventListener('change', function() {
+            const algo = this.value;
+            const priorityHeaders = document.querySelectorAll('#priorityHeader, .priority-cell');
+            const quantumInput = document.getElementById('quantumInput');
+            
+            if (algo === 'priority') {
+                priorityHeaders.forEach(el => el.style.display = '');
+                quantumInput.style.display = 'none';
+            } else if (algo === 'rr') {
+                priorityHeaders.forEach(el => el.style.display = 'none');
+                quantumInput.style.display = 'inline';
+            } else {
+                priorityHeaders.forEach(el => el.style.display = 'none');
+                quantumInput.style.display = 'none';
+            }
+        });
+
+        function addProcess() {
+            processCount++;
+            const tbody = document.getElementById('processTableBody');
+            const algo = document.getElementById('algorithm').value;
+            const row = document.createElement('tr');
+            row.setAttribute('data-process', processCount);
+            row.innerHTML = `
+                <td>P${processCount}</td>
+                <td><input type="number" class="arrival" value="0" min="0"></td>
+                <td><input type="number" class="burst" value="5" min="1"></td>
+                <td class="priority-cell" style="display: ${algo === 'priority' ? '' : 'none'};"><input type="number" class="priority" value="${processCount}" min="1"></td>
+                <td><button onclick="removeRow(this)" class="btn-reset" style="padding: 0.5rem 1rem;">Xóa</button></td>
+            `;
+            tbody.appendChild(row);
+        }
+
+        function removeRow(btn) {
+            const row = btn.closest('tr');
+            row.remove();
+        }
+
+        function resetAll() {
+            document.getElementById('ganttSection').classList.remove('active');
+            document.getElementById('processTableBody').innerHTML = `
+                <tr data-process="1">
+                    <td>P1</td>
+                    <td><input type="number" class="arrival" value="0" min="0"></td>
+                    <td><input type="number" class="burst" value="5" min="1"></td>
+                    <td class="priority-cell" style="display: none;"><input type="number" class="priority" value="1" min="1"></td>
+                    <td><button onclick="removeRow(this)" class="btn-reset" style="padding: 0.5rem 1rem;">Xóa</button></td>
+                </tr>
+            `;
+            processCount = 1;
+        }
+
+        function getProcessData() {
+            const rows = document.querySelectorAll('#processTableBody tr');
+            const processes = [];
+            rows.forEach((row, index) => {
+                const name = row.querySelector('td').textContent;
+                const arrival = parseInt(row.querySelector('.arrival').value);
+                const burst = parseInt(row.querySelector('.burst').value);
+                const priorityInput = row.querySelector('.priority');
+                const priority = priorityInput ? parseInt(priorityInput.value) : 0;
+                
+                processes.push({
+                    name,
+                    arrival,
+                    burst,
+                    priority,
+                    remaining: burst,
+                    color: colors[index % colors.length]
+                });
+            });
+            return processes;
+        }
+
+        function fcfsScheduling(processes) {
+            const sorted = [...processes].sort((a, b) => a.arrival - b.arrival);
+            const gantt = [];
+            let currentTime = 0;
+
+            sorted.forEach(p => {
+                if (currentTime < p.arrival) {
+                    gantt.push({
+                        name: 'Idle',
+                        start: currentTime,
+                        end: p.arrival,
+                        color: '#ffffff',
+                        isIdle: true
+                    });
+                    currentTime = p.arrival;
+                }
+                gantt.push({
+                    name: p.name,
+                    start: currentTime,
+                    end: currentTime + p.burst,
+                    color: p.color
+                });
+                currentTime += p.burst;
+            });
+
+            return gantt;
+        }
+
+        function sjfScheduling(processes) {
+            const gantt = [];
+            let currentTime = 0;
+            const remaining = [...processes].map(p => ({...p}));
+            const completed = [];
+
+            while (completed.length < processes.length) {
+                const available = remaining.filter(p => p.arrival <= currentTime && p.remaining > 0);
+                
+                if (available.length === 0) {
+                    const futureProcesses = remaining.filter(p => p.remaining > 0);
+                    if (futureProcesses.length === 0) break;
+                    futureProcesses.sort((a,b) => a.arrival - b.arrival);
+                    const nextArrival = futureProcesses[0].arrival;
+
+                    gantt.push({
+                        name: 'Idle',
+                        start: currentTime,
+                        end: nextArrival,
+                        color: '#ffffff',
+                        isIdle: true
+                    });
+                    currentTime = nextArrival;
+                    continue; 
+                }
+
+                available.sort((a, b) => a.burst - b.burst);
+                const current = available[0];
+                
+                gantt.push({
+                    name: current.name,
+                    start: currentTime,
+                    end: currentTime + current.burst,
+                    color: current.color
+                });
+
+                currentTime += current.burst;
+                current.remaining = 0;
+                completed.push(current);
+            }
+
+            return gantt;
+        }
+
+        function priorityScheduling(processes) {
+            const gantt = [];
+            let currentTime = 0;
+            const remaining = [...processes].map(p => ({...p}));
+            const completed = [];
+
+            while (completed.length < processes.length) {
+                const available = remaining.filter(p => p.arrival <= currentTime && p.remaining > 0);
+                
+                if (available.length === 0) {
+                    const futureProcesses = remaining.filter(p => p.remaining > 0);
+                    if (futureProcesses.length === 0) break; 
+                    futureProcesses.sort((a,b) => a.arrival - b.arrival);
+                    const nextArrival = futureProcesses[0].arrival;
+                    
+                    gantt.push({
+                        name: 'Idle',
+                        start: currentTime,
+                        end: nextArrival,
+                        color: '#ffffff',
+                        isIdle: true
+                    });
+                    currentTime = nextArrival;
+                    continue; 
+                }
+
+                available.sort((a, b) => a.priority - b.priority); 
+                const current = available[0];
+                
+                gantt.push({
+                    name: current.name,
+                    start: currentTime,
+                    end: currentTime + current.burst,
+                    color: current.color
+                });
+
+                currentTime += current.burst;
+                current.remaining = 0;
+                completed.push(current);
+            }
+
+            return gantt;
+        }
+
+        function roundRobinScheduling(processes, quantum) {
+            const gantt = [];
+            let currentTime = 0;
+            const queue = [];
+            const remaining = [...processes].map(p => ({...p})).sort((a, b) => a.arrival - b.arrival);
+            let processIndex = 0; 
+
+            while (remaining.some(p => p.remaining > 0)) {
+                while (processIndex < remaining.length && remaining[processIndex].arrival <= currentTime) {
+                    if(remaining[processIndex].remaining > 0) {
+                        if (!queue.includes(remaining[processIndex])) {
+                             queue.push(remaining[processIndex]);
+                        }
+                    }
+                    processIndex++;
+                }
+                
+                if (queue.length === 0) {
+                    if (processIndex < remaining.length) {
+                        const nextArrival = remaining[processIndex].arrival;
+                        gantt.push({
+                            name: 'Idle',
+                            start: currentTime,
+                            end: nextArrival,
+                            color: '#ffffff',
+                            isIdle: true
+                        });
+                        currentTime = nextArrival;
+                        continue; 
+                    } else {
+                        break;
+                    }
+                }
+
+                const current = queue.shift();
+                const execTime = Math.min(quantum, current.remaining);
+                
+                gantt.push({
+                    name: current.name,
+                    start: currentTime,
+                    end: currentTime + execTime,
+                    color: current.color
+                });
+
+                currentTime += execTime;
+                current.remaining -= execTime;
+
+                while (processIndex < remaining.length && remaining[processIndex].arrival <= currentTime) {
+                     if(remaining[processIndex].remaining > 0) {
+                        if (!queue.includes(remaining[processIndex])) {
+                             queue.push(remaining[processIndex]);
+                        }
+                    }
+                    processIndex++;
+                }
+
+                if (current.remaining > 0) {
+                    queue.push(current);
+                }
+            }
+
+            return gantt;
+        }
+
+        function calculateMetrics(processes, gantt) {
+            const results = processes.map(p => {
+                const processBlocks = gantt.filter(g => g.name === p.name && !g.isIdle);
+                if (processBlocks.length === 0) return {...p, completionTime: 0, turnaroundTime: 0, waitingTime: 0};
+
+                const completionTime = Math.max(...processBlocks.map(g => g.end));
+                const turnaroundTime = completionTime - p.arrival;
+                const waitingTime = turnaroundTime - p.burst;
+                
+                return {
+                    ...p,
+                    completionTime,
+                    turnaroundTime,
+                    waitingTime
+                };
+            });
+
+            return results;
+        }
+
+        async function runScheduling() {
+            const algo = document.getElementById('algorithm').value;
+            const processes = getProcessData();
+            let gantt = [];
+
+            switch(algo) {
+                case 'fcfs':
+                    gantt = fcfsScheduling(processes);
+                    break;
+                case 'sjf':
+                    gantt = sjfScheduling(processes);
+                    break;
+                case 'priority':
+                    gantt = priorityScheduling(processes);
+                    break;
+                case 'rr':
+                    const quantum = parseInt(document.getElementById('quantum').value);
+                    gantt = roundRobinScheduling(processes, quantum);
+                    break;
+            }
+
+            document.getElementById('ganttSection').classList.add('active');
+            await renderGanttChart(gantt);
+            
+            const results = calculateMetrics(processes, gantt);
+            renderResults(results);
+            renderProcessColors(processes);
+        }
+
+        /**
+         * ==================================================================
+         * HÀM RENDERGANTTCHART ĐÃ ĐƯỢC CẬP NHẬT
+         * ==================================================================
+         */
+        async function renderGanttChart(gantt) {
+            const chart = document.getElementById('ganttChart');
+            const timeline = document.getElementById('timeline');
+            const timePointer = document.getElementById('timePointer');
+            const pointerTime = document.getElementById('pointerTime');
+            
+            // SỬA: Xóa nội dung chart, nhưng *giữ lại* con trỏ
+            chart.innerHTML = '';
+            chart.appendChild(timePointer);
+            
+            timeline.innerHTML = '';
+
+            const totalTime = Math.max(...gantt.map(g => g.end));
+            if (totalTime === 0) return; 
+
+            pointerTime.textContent = '0.0';
+            timePointer.style.left = '0%';
+            timePointer.style.display = 'flex';
+
+            const firstMark = document.createElement('div');
+            firstMark.className = 'time-mark start';
+            firstMark.textContent = 0;
+            timeline.appendChild(firstMark);
+            
+            const animSpeed = 30; // Tốc độ
+
+            for (let i = 0; i < gantt.length; i++) {
+                const block = gantt[i];
+                const duration = block.end - block.start;
+                const widthPercent = ((duration) / totalTime * 100);
+                
+                const div = document.createElement('div');
+                div.className = 'process-block';
+                div.style.width = widthPercent + '%';
+
+                const totalSteps = Math.ceil(duration * 1000 / animSpeed);
+                const timePerStep = (totalSteps > 0) ? (duration * 1000) / totalSteps : 0;
+
+                if (block.isIdle) {
+                    div.style.background = '#ffffff'; 
+                    div.style.border = '2px dashed #ccc'; 
+                    const name = document.createElement('span');
+                    name.className = 'process-name';
+                    name.textContent = 'Idle';
+                    name.style.color = '#aaa'; 
+                    div.appendChild(name);
+                    chart.appendChild(div);
+                } else {
+                    div.style.background = '#e0e0e0';
+                    div.style.border = 'none'; // Bỏ border để fix lỗi đồng bộ
+                    
+                    const fill = document.createElement('div');
+                    fill.className = 'process-fill';
+                    fill.style.background = block.color;
+                    const name = document.createElement('span');
+                    name.className = 'process-name';
+                    name.textContent = block.name;
+                    name.style.color = '#666';
+                    div.appendChild(fill);
+                    div.appendChild(name);
+                    chart.appendChild(div);
+                    
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    name.style.color = 'white';
+                }
+
+                // Animation loop
+                if (totalSteps > 0) {
+                    for (let step = 1; step <= totalSteps; step++) {
+                        await new Promise(resolve => setTimeout(resolve, timePerStep)); 
+                        
+                        const displayTime = block.start + (duration * step / totalSteps);
+                        const progressPercent = (displayTime / totalTime) * 100;
+
+                        if (!block.isIdle) {
+                            const fill = div.querySelector('.process-fill');
+                            const fillProgress = (step / totalSteps) * 100;
+                            fill.style.width = fillProgress + '%';
+                        }
+
+                        pointerTime.textContent = displayTime.toFixed(1);
+                        // SỬA: Giờ con trỏ và fill đã CHUNG hệ quy chiếu
+                        timePointer.style.left = progressPercent + '%';
+                    }
+                }
+                
+                // Finalize block state
+                if (!block.isIdle) {
+                    const fill = div.querySelector('.process-fill');
+                    if (fill) fill.style.width = '100%';
+                    div.style.background = block.color;
+                    div.style.border = 'none';
+                }
+
+                const endPercent = (block.end / totalTime) * 100;
+                timePointer.style.left = endPercent + '%';
+                pointerTime.textContent = block.end;
+
+                const mark = document.createElement('div');
+                mark.className = 'time-mark';
+                mark.style.width = widthPercent + '%';
+                mark.textContent = block.end;
+                timeline.appendChild(mark);
+            }
+
+            timePointer.style.display = 'none';
+        }
+        
+        function renderResults(results) {
+            const tbody = document.getElementById('resultsTableBody');
+            tbody.innerHTML = '';
+
+            let totalWaiting = 0;
+            let totalTurnaround = 0;
+
+            results.forEach(r => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${r.name}</td>
+                    <td>${r.arrival}</td>
+                    <td>${r.burst}</td>
+                    <td>${r.completionTime}</td>
+                    <td>${r.waitingTime}</td>
+                    <td>${r.turnaroundTime}</td>
+                `;
+                tbody.appendChild(row);
+                
+                totalWaiting += r.waitingTime;
+                totalTurnaround += r.turnaroundTime;
+            });
+
+            document.getElementById('avgWaiting').textContent = (totalWaiting / results.length).toFixed(2);
+            document.getElementById('avgTurnaround').textContent = (totalTurnaround / results.length).toFixed(2);
+        }
+
+        function renderProcessColors(processes) {
+            const container = document.getElementById('processColors');
+            container.innerHTML = '<strong>Màu sắc tiến trình:</strong>';
+            
+            processes.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'color-item';
+                item.innerHTML = `
+                    <div class="color-box" style="background: ${p.color};"></div>
+                    <span>${p.name}</span>
+                `;
+                container.appendChild(item);
+            });
+        }
+    </script>
+</body>
+</html>
